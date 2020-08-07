@@ -92,6 +92,7 @@ class MicropyGPS(object):
         self.last_sv_sentence = 0
         self.total_sv_sentences = 0
         self.satellite_data = dict()
+        self.satellite_data_glonass = dict()
         self.hdop = 0.0
         self.pdop = 0.0
         self.vdop = 0.0
@@ -532,10 +533,77 @@ class MicropyGPS(object):
 
         # For a new set of sentences, we either clear out the existing sat data or
         # update it as additional SV sentences are parsed
+
         if current_sv_sentence == 1:
-            self.satellite_data = satellite_dict
+            self.satellite_data = satellite_dict    #First line of GPGSV
         else:
-            self.satellite_data.update(satellite_dict)
+            self.satellite_data.update(satellite_dict)  #Rest of lines including GLGSV
+
+        return True
+
+    def glgsv(self):
+        """Parse Satellites in View (GSV) sentence. Updates number of SV Sentences,the number of the last SV sentence
+        parsed, and data on each satellite present in the sentence"""
+        try:
+            num_sv_sentences = int(self.gps_segments[1])
+            current_sv_sentence = int(self.gps_segments[2])
+            sats_in_view = int(self.gps_segments[3])
+        except ValueError:
+            return False
+
+        # Create a blank dict to store all the satellite data from this sentence in:
+        # satellite PRN is key, tuple containing telemetry is value
+        satellite_dict = dict()
+
+        # Calculate  Number of Satelites to pull data for and thus how many segment positions to read
+        if num_sv_sentences == current_sv_sentence:
+            # Last sentence may have 1-4 satellites; 5 - 20 positions
+            sat_segment_limit = (sats_in_view - ((num_sv_sentences - 1) * 4)) * 5
+        else:
+            sat_segment_limit = 20  # Non-last sentences have 4 satellites and thus read up to position 20
+
+        # Try to recover data for up to 4 satellites in sentence
+        for sats in range(4, sat_segment_limit, 4):
+
+            # If a PRN is present, grab satellite data
+            if self.gps_segments[sats]:
+                try:
+                    sat_id = int(self.gps_segments[sats])
+                except (ValueError,IndexError):
+                    return False
+
+                try:  # elevation can be null (no value) when not tracking
+                    elevation = int(self.gps_segments[sats+1])
+                except (ValueError,IndexError):
+                    elevation = None
+
+                try:  # azimuth can be null (no value) when not tracking
+                    azimuth = int(self.gps_segments[sats+2])
+                except (ValueError,IndexError):
+                    azimuth = None
+
+                try:  # SNR can be null (no value) when not tracking
+                    snr = int(self.gps_segments[sats+3])
+                except (ValueError,IndexError):
+                    snr = None
+            # If no PRN is found, then the sentence has no more satellites to read
+            else:
+                break
+
+            # Add Satellite Data to Sentence Dict
+            satellite_dict[sat_id] = (elevation, azimuth, snr)
+
+        # Update Object Data
+        self.total_sv_sentences = num_sv_sentences
+        self.last_sv_sentence = current_sv_sentence
+        self.satellites_in_view = sats_in_view
+
+        # For a new set of sentences, we either clear out the existing sat data or
+        # update it as additional SV sentences are parsed
+        """if current_sv_sentence == 1:
+            self.satellite_data = satellite_dict    #First line of GPGSV
+        else:"""
+        self.satellite_data.update(satellite_dict)  #Rest of lines including GLGSV
 
         return True
 
@@ -819,7 +887,7 @@ class MicropyGPS(object):
                            'GPGGA': gpgga, 'GLGGA': gpgga,
                            'GPVTG': gpvtg, 'GLVTG': gpvtg,
                            'GPGSA': gpgsa, 'GLGSA': gpgsa,
-                           'GPGSV': gpgsv, 'GLGSV': gpgsv,
+                           'GPGSV': gpgsv, 'GLGSV': glgsv,
                            'GPGLL': gpgll, 'GLGLL': gpgll,
                            'GNGGA': gpgga, 'GNRMC': gprmc,
                            'GNVTG': gpvtg, 'GNGLL': gpgll,

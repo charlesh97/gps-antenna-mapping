@@ -165,7 +165,7 @@ def GPS_Parse_SV(file_name, file_out):
                 else:
                     hasFix = False
 
-            if(line.find("$GPGSV") != -1):
+            if(line.find("$GPGSV") != -1 or line.find("$GLGSV") != -1):
                 for x in line:
                     my_gps.update(x)
 

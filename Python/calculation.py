@@ -39,17 +39,17 @@ class SatelliteDataPointPair:
 
 def main():
     #### PARSE RAW DATA ####
-    #GPS_Parse_SV("../Logged/Dipole-8-5-20.TXT", "Dipole_Raw_GPS.obj")
-    #GPS_Parse_SV("../Logged/Patch-8-5-20.TXT", "Ref_Raw_GPS.obj")
+    #GPS_Parse_SV("../Logged/Dipole-8-2-20.TXT", "Dipole_Raw_GPS.obj")
+    #GPS_Parse_SV("../Logged/Patch-8-2-20.TXT", "Ref_Raw_GPS.obj")
     #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferenceTurnstile3D.csv", "./ReferenceTurnstile_Data.obj")
     #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferencePatchAntenna.csv", "./ReferencePatch_Data.obj")
 
     #### Time Align Data, Remove Bad SVs ####
-    MatchUpData("Dipole_Raw_GPS.obj", "Ref_Raw_GPS.obj")
+    #MatchUpData("Dipole_Raw_GPS.obj", "Ref_Raw_GPS.obj")
 
     #### Clean up data  ####
     CleanData("Dipole_Raw_GPS.obj", "Dipole_Time.obj", True) 
-    #CleanData("Ref_Raw_GPS.obj", "Ref_Time.obj", True)
+    CleanData("Ref_Raw_GPS.obj", "Ref_Time.obj", True)
     #PlotDeltaCNO("Dipole_SV.obj", "Ref_SV.obj")
 
     #### Combine the data and prep for delta calculations ####
@@ -357,7 +357,6 @@ def CleanData(file_in, file_out, save_plots):
                         data["r"].append(np.mean(r[i][j][0]))
                         data["time"].append(int(np.mean(r[i][j][1])))
                         
-
             # Use dataframe pandas to sort by time
             df = pd.DataFrame(data)
             df = df.sort_values(by='time').reset_index(drop=True)   #don't forget to reindex
@@ -365,7 +364,7 @@ def CleanData(file_in, file_out, save_plots):
             y = df["r"] * np.sin(df["phi"]) * np.sin(df["theta"])
             z = df["r"] * np.cos(df["phi"])
             fig.add_trace(
-                go.Scatter3d(x=x, y=y, z=z, mode='lines', name=str(key))
+                go.Scatter3d(x=x, y=y, z=z, mode='markers', name=str(key))
             )
         #f = "../Exported Plots/" + file_in.split('.')[0] + "-3DCombinedSV.png"
         fig.update_layout(title_text=maintitle)
