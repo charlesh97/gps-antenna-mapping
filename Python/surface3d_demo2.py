@@ -68,6 +68,7 @@ fig = ff.create_trisurf(x=x, y=y, z=z,
 
 import plotly.graph_objects as go 
 from plotly.subplots import make_subplots
+print("starting")
 x = np.linspace(0,10,2000)
 y1 = np.sin(x)
 y2 = np.sin(x)*np.cos(x)
@@ -80,8 +81,7 @@ fig.add_trace(
     go.Scatter(x=x,y=y1,mode='lines',name='sin'), row=2,col=1)
 fig.add_trace(
     go.Scatter(x=x,y=y2,mode='lines',name='sincos'), row=2,col=1)
-fig.show()
-
+print("finished")
 
 
 

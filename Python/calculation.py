@@ -39,13 +39,13 @@ class SatelliteDataPointPair:
 
 def main():
     #### PARSE RAW DATA ####
-    #GPS_Parse_SV("../Logged/Dipole-8-2-20.TXT", "Dipole_Raw_GPS.obj")
-    #GPS_Parse_SV("../Logged/Patch-8-2-20.TXT", "Ref_Raw_GPS.obj")
+    #GPS_Parse_SV("../Logged/Dipole-8-5-20.TXT", "Dipole_Raw_GPS.obj")
+    #GPS_Parse_SV("../Logged/Patch-8-5-20.TXT", "Ref_Raw_GPS.obj")
     #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferenceTurnstile3D.csv", "./ReferenceTurnstile_Data.obj")
     #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferencePatchAntenna.csv", "./ReferencePatch_Data.obj")
 
     #### Time Align Data, Remove Bad SVs ####
-    #MatchUpData("Dipole_Raw_GPS.obj", "Ref_Raw_GPS.obj")
+    MatchUpData("Dipole_Raw_GPS.obj", "Ref_Raw_GPS.obj")
 
     #### Clean up data  ####
     CleanData("Dipole_Raw_GPS.obj", "Dipole_Time.obj", True) 
@@ -89,27 +89,16 @@ def MatchUpData(file1_in, file2_in):
         for key in data1.get(time): #By satellite ID
             data1[time][key] = list(data1[time][key])   #<----- Sneak a tuple to list conversion here for later
             val = data1[time][key]
-
             if val[0] == None or val[1] == None or val[2] == None:  #Remove bad data
                 remove1.append([time, key])
-            else:                                                   #Adjust the coordinate space
-                val[0] = 90 - val[0] #Convert to elev to PHI
-                val[1] = 90 - val[1] #Azimuth to theta
-                if val[1] < 0:
-                    val[1] = val[1] + 360
+
 
     for time in data2:
         for key in data2.get(time):
             data2[time][key] = list(data2[time][key])   #<----- Sneak a tuple to list conversion here for later
             val = data2[time][key]
-
             if val[0] == None or val[1] == None or val[2] == None:
                 remove2.append([time, key])
-            else:                                                   #Adjust the coordinate space
-                val[0] = 90 - val[0] #Convert to elev to PHI
-                val[1] = 90 - val[1]
-                if val[1] < 0:
-                    val[1] = val[1] + 360
 
 
     for x in remove1:
@@ -117,7 +106,7 @@ def MatchUpData(file1_in, file2_in):
     for x in remove2:
         data2[x[0]].pop(x[1], None)
     
-    print("Removed " + str(len(remove1) + len(remove2)) + " empty datapoints")
+    print("Removed " + str(len(remove1) + len(remove2)) + " empty satellite datapoints")
 
     #Find timestamp differences
     remove1.clear()
@@ -156,21 +145,23 @@ def MatchUpData(file1_in, file2_in):
     for x in remove2:
         data2[x[0]].pop(x[1], None)
 
-    print("Removed " + str(len(remove1) + len(remove2)) + " missing satellites")
+    print("Removed " + str(len(remove1) + len(remove2)) + " missing satellite datapoints")
 
     #Check that the length of timestamps are the same
     if len(data1) != len(data2):
         print("Data1:" + str(len(data1)) + " Data2:" + str(len(data2)) + " mismatch!")
         exit()
     
+    #Check that the number of satellite datapoints are the same
+    total_count = 0
     length1 = {}
     for time in data1:
         for key in data1[time]:
+            total_count = total_count + 1
             if key not in length1:
                 length1[key] = 0
             else:
                 length1[key] = length1[key] + 1
-    
     length2 = {}
     for time in data2:
         for key in data2[time]:
@@ -179,13 +170,14 @@ def MatchUpData(file1_in, file2_in):
             else:
                 length2[key] = length2[key] + 1
 
-
     for l in length1:
         if length1[l] != length2[l]:
             print("-------ERROR------")
             print("Misaligned datasets found at SV:" + str(l) + ", " + str(length1[l]) + ", " + str(length2[l]))
             exit()
         print("SV:" + str(l) + "\t-\t" + str(length1[l]) + ", " + str(length2[l]))
+    
+    print(str(total_count) + " individual datapoints, " + str(len(length1)) + " SVs")
     print("Data alignment check passed")
 
     pickle.dump(data1, open( file1_in, "wb"))
@@ -197,15 +189,23 @@ def MatchUpData(file1_in, file2_in):
 def CleanData(file_in, file_out, save_plots):
     #In order to clean the data, we need to seperate the SVs (keep timestamps), and then smooth the phi, cno, az
     data = pickle.load(open ( file_in, "rb" ))
-    
-    #with open(file_out2, mode='w', newline='') as f_out:
-        #csv_writer = csv.writer(f_out, delimiter=',')
-        #csv_writer.writerow(["TIMESTAMP","SV","THETA","PHI","CNO"])
-        #csv_writer.writerow([float(time), key, val[0], val[1], val[2]])
+
+    #First adjust the elev/azimuth values to match spherical coordinate system
+    for time in data:
+        for key in data.get(time):
+            val = data[time][key]
+            val[0] = 90 - val[0] #Convert to elev to PHI
+            if val[0] > 90:
+                val[0] = 90
+
+            val[1] = 90 - val[1] #Azimuth to THETA
+            if val[1] < 0:
+                val[1] = val[1] + 360
 
     #Reorganizing the list by SV, not time
     List_By_SV = {}
-    for time in data: #list of timestamps
+    i = 0
+    for time in data: #list of time
         for key in data.get(time): #list of SVs by ID
             val = data[time][key][:]
         
@@ -219,11 +219,15 @@ def CleanData(file_in, file_out, save_plots):
                 List_By_SV[key]["cno"] = []
             if "time" not in List_By_SV[key]:
                 List_By_SV[key]["time"] = []
+            if "time_idx" not in List_By_SV[key]:
+                List_By_SV[key]["time_idx"] = []
 
             List_By_SV[key]["phi"].append(val[0])
             List_By_SV[key]["theta"].append(val[1])
             List_By_SV[key]["cno"].append(val[2])
-            List_By_SV[key]["time"].append(float(time))    #Add timestamp for future reference
+            List_By_SV[key]["time"].append(time)    
+            List_By_SV[key]["time_idx"].append(i)   #Add timestamp(index) for future reference
+        i = i + 1
 
     #Each key now has lists -> convert to arrays
     for key in List_By_SV:
@@ -234,7 +238,7 @@ def CleanData(file_in, file_out, save_plots):
     #Continue cleaning the data
     #Smooth and save data 
     for key in List_By_SV:
-        smooth_data = pd.Series(List_By_SV[key]["cno"]).rolling(window=10).mean()
+        smooth_data = pd.Series(List_By_SV[key]["cno"]).rolling(window=100).mean()
         val = smooth_data.values
         for i in range(len(val)):
             if str(val[i]) == "nan":
@@ -244,11 +248,14 @@ def CleanData(file_in, file_out, save_plots):
 
     # Only show and save plots of requested
     if save_plots:
-
+        
         #### Plot CNO Data 
         titles = []
         for key in List_By_SV:
             titles.append(str(key))
+        
+        """
+        maintitle = "CNO(dB) by SV ID - " + file_in
         fig = make_subplots(rows=6, cols=6, subplot_titles=titles)
         i = 0
         for key in List_By_SV:
@@ -257,152 +264,151 @@ def CleanData(file_in, file_out, save_plots):
                 go.Scatter(y=List_By_SV[key]["cno"],mode='lines',line=dict(color="#d32f2f")),row=int(i/6)+1,col=(i%6)+1)
             i = i + 1
         f = "../Exported Plots/" + file_in.split('.')[0] + "-CNOBySV.png"
-        title = "CNO(dB) by SV ID - " + file_in
-        fig.update_layout(title_text=title, showlegend=False)
-        fig.show()
+        fig.update_layout(title_text=maintitle, showlegend=False)
         fig.update_layout(height=1440,width=2560)
-        fig.write_image(f)
+        #fig.show()
 
-        fig.layout = {}
-        fig.update_layout()
-        fig.show()
-
-
-        #### Plot THETA / elevation
-        fig = plot.figure()
-        fig.suptitle("Φ by SV ID - " + file_in)
+        #### Plot PHI / elevation
+        maintitle = "Φ by SV ID - " + file_in
+        fig = make_subplots(rows=6, cols=6, subplot_titles=titles)
         i = 0
         for key in List_By_SV:
+            x = np.linspace(1,len(List_By_SV[key]["phi"]),len(List_By_SV[key]["phi"]))
+            fig.add_trace(
+                go.Scatter(y=List_By_SV[key]["phi"],mode='lines',line=dict(color="#d32f2f")),row=int(i/6)+1,col=(i%6)+1)
             i = i + 1
-            ax1 = fig.add_subplot(6,6,i)
-            ax1.plot(List_By_SV[key]["elev"])
-            ax1.set_title(str(key))
-
-        plot.tight_layout()
-        plot.subplots_adjust(wspace=0.2, hspace=0.35)
         f = "../Exported Plots/" + file_in.split('.')[0] + "-PHIBySV.png"
-        plot.savefig(f, dpi=300, orientation='landscape', bbox_inches='tight')
-        fig.clear()
-        plot.close(fig)
+        fig.update_layout(title_text=maintitle, showlegend=False)
+        fig.update_layout(height=1440,width=2560)
+        #fig.show()
 
-        #### Plot PHI / Azimuth
-        fig = plot.figure()
-        fig.suptitle("θ by SV ID - " + file_in)
+        #### Plot THETA / Azimuth
+        maintitle = "θ by SV ID - " + file_in
+        fig = make_subplots(rows=6, cols=6, subplot_titles=titles)
         i = 0
         for key in List_By_SV:
+            x = np.linspace(1,len(List_By_SV[key]["theta"]),len(List_By_SV[key]["theta"]))
+            fig.add_trace(
+                go.Scatter(y=List_By_SV[key]["theta"],mode='lines',line=dict(color="#d32f2f")),row=int(i/6)+1,col=(i%6)+1)
             i = i + 1
-            ax1 = fig.add_subplot(6,6,i)
-            ax1.plot(List_By_SV[key]["az"])
-            ax1.set_title(str(key))
+        f = "../Exported Plots/" + file_in.split('.')[0] + "-PHIBySV.png"
+        fig.update_layout(title_text=maintitle, showlegend=False)
+        fig.update_layout(height=1440,width=2560)
+        """
+        #fig.show()
 
-        plot.tight_layout()
-        plot.subplots_adjust(wspace=0.2, hspace=0.35)
-        f = "../Exported Plots/" + file_in.split('.')[0] + "-THETABySV.png"
-        plot.savefig(f, dpi=300, orientation='landscape', bbox_inches='tight')
-        fig.clear()
-        plot.close(fig)
-
-        #Plot the 3D data for each SV
-        fig = plot.figure()
-        fig.suptitle("3D Plot of SV - " + file_in)
+        #### Plot the 3D data for each SV
+        """maintitle = "3D Plot of SV - " + file_in
+        fig = make_subplots(rows=6, cols=6, subplot_titles=titles, specs=[[{"type":"scatter3d"} for j in range(6)] for i in range(6)])
         i = 0
         for key in List_By_SV:
-            i = i + 1
-            ax1 = fig.add_subplot(6,6,i, projection='3d')
             phi = []
             theta = []
             r = []
-            for j in range(len(List_By_SV[key]["elev"])):
-                phi.append(List_By_SV[key]["elev"][j] * np.pi / 180)
-                theta.append(List_By_SV[key]["az"][j] * np.pi / 180)
+            for j in range(len(List_By_SV[key]["phi"])):
+                phi.append(List_By_SV[key]["phi"][j] * np.pi / 180)
+                theta.append(List_By_SV[key]["theta"][j] * np.pi / 180)
                 
             r = np.ones(len(phi))
             x = r * np.sin(phi) * np.cos(theta)
             y = r * np.sin(phi) * np.sin(theta)
             z = r * np.cos(phi)
-            ax1.plot(x,y,z, label=str(key))
-            ax1.set_title(str(key))
-
-        plot.tight_layout()
-        plot.subplots_adjust(wspace=0.2, hspace=0.35)
+            fig.add_trace(
+                go.Scatter3d(x=x,y=y,z=z, mode='lines'),row=int(i/6)+1,col=(i%6)+1)
+            i = i + 1
         f = "../Exported Plots/" + file_in.split('.')[0] + "-3DSV.png"
-        plot.savefig(f, dpi=300, orientation='landscape', bbox_inches='tight')
-        fig.clear()
-        plot.close(fig)
+        fig.update_layout(title_text=maintitle, showlegend=False)
+        fig.update_layout(height=1440,width=2560)
+        fig.show()
+        """
         
-        #Plot the combined 3D data
-        fig = plot.figure()
-        fig.suptitle("Combined 3D SV Plot - " + file_in)
-        ax1 = fig.add_subplot(111, projection='3d')
+        #### Plot combined 3D data - Lines
+        # Going to build an nxm array to store the list of R values for each SV
+        # Average those values and build an unsorted list of phi/theta/r/time
+        # Sort the list by time
+        # Plot the lines with remaining phi/theta/r data
+        maintitle = "Combined 3D SV Plot - " + file_in
+        fig = go.Figure()
 
-
-        data3d = {}
-        data3d["x"] = []
-        data3d["y"] = []
-        data3d["z"] = []
-        data3d["id"] = []
+        i = 0
+        phi_ = list(np.linspace(0,90,91))
+        theta_ = list(np.linspace(0,359,360))
+        n = len(phi_)
+        m = len(theta_)
+        combined_r = [[ [] for x in range(m)] for x in range(n)] #n x m matrix
 
         for key in List_By_SV:
-            
-            phi_ = list(np.linspace(0,90,91))
-            theta_ = list(np.linspace(0,359,360))
-
             # Now build the R nxm array
-            n = len(phi_)
-            m = len(theta_)
-            r2 = [[[] for x in range(m)] for x in range(n)] #n x m matrix
+            r = [[[[],[]] for x in range(m)] for x in range(n)] #n x m matrix
             for i in range(len(List_By_SV[key]["phi"])):
                 x = List_By_SV[key]["phi"][i]
                 y = List_By_SV[key]["theta"][i]
-                r2[x][y].append(List_By_SV[key]["cno"][i])
+                r[x][y][0].append(List_By_SV[key]["cno"][i])
+                r[x][y][1].append(List_By_SV[key]["time_idx"][i])
+                combined_r[x][y].append(List_By_SV[key]["cno"][i])   #This is used in the next portion
 
-            phi = []
-            theta = []
-            r = []
+            # Average Values
+            data = {"phi":[],"theta":[],"r":[],"time":[]} #phi,theta,r,time_idx
             for i in range(n):
                 for j in range(m):
-                    if len(r2[i][j]) > 0:
-                        r2[i][j] = np.mean(r2[i][j])
-                        r.append(r2[i][j])
-                        phi.append(i * np.pi / 180)
-                        theta.append(j * np.pi / 180)
-
-            """with open(file_out2, mode='w', newline='') as f_out:
-                csv_writer = csv.writer(f_out, delimiter=',')
-                csv_writer.writerow(["THETA","PHI","CNO"])
-                for i in range(n):
-                    for j in range(m):
-                        if r2[i][j]:
-                            csv_writer.writerow([phi_[i],theta_[j],r2[i][j]])"""
+                    if len(r[i][j][0]) > 0:
+                        data["phi"].append(i * np.pi / 180) #i is the same as phi(i)
+                        data["theta"].append(j * np.pi / 180)
+                        data["r"].append(np.mean(r[i][j][0]))
+                        data["time"].append(int(np.mean(r[i][j][1])))
                         
-            #phi = List_By_SV[key]["phi"] * np.pi / 180
-            #theta = List_By_SV[key]["theta"] * np.pi / 180
-            #r = List_By_SV[key]["cno"]
 
-            #m = min(r)
-            #r = r - np.ones(len(r))*m
-                
-            #r = np.ones(len(phi))
-            x = r * np.sin(phi) * np.cos(theta)
-            y = r * np.sin(phi) * np.sin(theta)
-            z = r * np.cos(phi)
-
-            data3d["x"].extend(x)
-            data3d["y"].extend(y)
-            data3d["z"].extend(z)
-            data3d["id"].extend(np.ones(len(x))*key)
-
-        fig = px.scatter_3d(data3d, x='x',y='y',z='z', color='id')
-        fig.show()
-        exit()
-            #ax1.scatter(x,y,z, label=str(key))
-
+            # Use dataframe pandas to sort by time
+            df = pd.DataFrame(data)
+            df = df.sort_values(by='time').reset_index(drop=True)   #don't forget to reindex
+            x = df["r"] * np.sin(df["phi"]) * np.cos(df["theta"])      #sin(PHI), cos(THETA)       #WHERE PHI @ Z-AXIS = 0, @XY-PLANE = 90
+            y = df["r"] * np.sin(df["phi"]) * np.sin(df["theta"])
+            z = df["r"] * np.cos(df["phi"])
+            fig.add_trace(
+                go.Scatter3d(x=x, y=y, z=z, mode='lines', name=str(key))
+            )
         #f = "../Exported Plots/" + file_in.split('.')[0] + "-3DCombinedSV.png"
-        #plot.legend()
-        #plot.show()
-        #plot.savefig(f, dpi=300, orientation='landscape', bbox_inches='tight')
-        #fig.clear()
-        #plot.close(fig)
+        fig.update_layout(title_text=maintitle)
+        #fig.update_layout(height=1440,width=2560)
+        fig.show()
+        
+
+        #### Plot combined 3D data - Surface
+        # combined_r already has nxm (phi/theta) averaged data
+        # Build x,y,z arrays
+        #
+        maintitle = "Combined 3D SV Plot - " + file_in
+        #Build the dataset
+        data = {
+            "phi": [],
+            "theta": [],
+            "r": []
+        }
+        for i in range(n):
+            for j in range(m):
+                if len(combined_r[i][j]) > 0: #empty list otherwise
+                    data["phi"].append(i)
+                    data["theta"].append(j)
+                    data["r"].append(np.mean(combined_r[i][j]))
+        
+        #Sort dataset
+        pickle.dump(data, open("dataset.obj", "wb"))
+        print('dumped')
+        exit()
+
+        df = pd.DataFrame(data)
+        df = df.sort_values(by=['phi','theta']).reset_index(drop=True)
+        x = df["r"] * np.sin(df["phi"]) * np.cos(df["theta"])      #sin(PHI), cos(THETA)       #WHERE PHI @ Z-AXIS = 0, @XY-PLANE = 90
+        y = df["r"] * np.sin(df["phi"]) * np.sin(df["theta"])
+        z = df["r"] * np.cos(df["phi"])
+        fig = go.Figure(
+            go.Mesh3d(x=x,y=y,z=z,alphahull=1)
+            #go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=8,color=df["r"], colorbar=dict(title="Colorbar"), colorscale='Inferno',opacity=0.8))
+        )
+
+        fig.update_layout(title_text=maintitle,coloraxis_showscale=True)
+        #fig.update_layout(height=1440,width=2560)
+        fig.show()
 
     #Delete any bad data you find
     #Temporarily this is done manually by SV ID
@@ -425,9 +431,8 @@ def CleanData(file_in, file_out, save_plots):
             data_to_save[time][key].append(List_By_SV[key]["theta"][idx])
             data_to_save[time][key].append(List_By_SV[key]["cno"][idx])
 
-
+    #pickle.dump(data_to_save, open(file_in, "wb"))
     pickle.dump(List_By_SV, open(file_out, "wb"))
-    pickle.dump(data_to_save, open(file_in, "wb"))
     print("Finished cleaning " + file_in)
 
 #Function: PlotDeltaCNO()
@@ -747,6 +752,13 @@ def Calculate_3D(file_in, reference_in):
 
 
 ####################################### DEPRECATED FUNCTIONS ###################################
+def CSV_EXPORT():
+        #with open(file_out2, mode='w', newline='') as f_out:
+        #csv_writer = csv.writer(f_out, delimiter=',')
+        #csv_writer.writerow(["TIMESTAMP","SV","THETA","PHI","CNO"])
+        #csv_writer.writerow([float(time), key, val[0], val[1], val[2]])
+    print("csv export done")
+
 def Calculate_SV_Movement(file_in1, file_in2):
     data1 = pickle.load(open( file_in1, "rb" ))
 
