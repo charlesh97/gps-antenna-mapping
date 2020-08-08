@@ -42,14 +42,15 @@ def main():
     #GPS_Parse_SV("../Logged/Dipole-8-2-20.TXT", "Dipole_Raw_GPS.obj")
     #GPS_Parse_SV("../Logged/Patch-8-2-20.TXT", "Ref_Raw_GPS.obj")
     #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferenceTurnstile3D.csv", "./ReferenceTurnstile_Data.obj")
-    #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferencePatchAntenna.csv", "./ReferencePatch_Data.obj")
+    Parse3DFile('1580000000', 'rhcp', "../Reference/ReferencePatchAntenna.csv", "./ReferencePatch_Data.obj")
+    PlotReference("ReferencePatch_Data.obj")
 
     #### Time Align Data, Remove Bad SVs ####
     #MatchUpData("Dipole_Raw_GPS.obj", "Ref_Raw_GPS.obj")
 
     #### Clean up data  ####
-    CleanData("Dipole_Raw_GPS.obj", "Dipole_Time.obj", True) 
-    CleanData("Ref_Raw_GPS.obj", "Ref_Time.obj", True)
+    #CleanData("Dipole_Raw_GPS.obj", "Dipole_Time.obj", True) 
+    #CleanData("Ref_Raw_GPS.obj", "Ref_Time.obj", True)
     #PlotDeltaCNO("Dipole_SV.obj", "Ref_SV.obj")
 
     #### Combine the data and prep for delta calculations ####
@@ -253,74 +254,48 @@ def CleanData(file_in, file_out, save_plots):
         titles = []
         for key in List_By_SV:
             titles.append(str(key))
-        
-        """
+        rcount = int(len(List_By_SV)/5) + 1
+
         maintitle = "CNO(dB) by SV ID - " + file_in
-        fig = make_subplots(rows=6, cols=6, subplot_titles=titles)
+        fig = make_subplots(rows=rcount, cols=5, subplot_titles=titles)
         i = 0
         for key in List_By_SV:
             x = np.linspace(1,len(List_By_SV[key]["cno"]),len(List_By_SV[key]["cno"]))
             fig.add_trace(
-                go.Scatter(y=List_By_SV[key]["cno"],mode='lines',line=dict(color="#d32f2f")),row=int(i/6)+1,col=(i%6)+1)
+                go.Scatter(y=List_By_SV[key]["cno"],mode='lines',line=dict(color="#d32f2f")),row=int(i/5)+1,col=(i%5)+1)
             i = i + 1
         f = "../Exported Plots/" + file_in.split('.')[0] + "-CNOBySV.png"
         fig.update_layout(title_text=maintitle, showlegend=False)
         fig.update_layout(height=1440,width=2560)
-        #fig.show()
+        fig.show()
 
         #### Plot PHI / elevation
         maintitle = "Φ by SV ID - " + file_in
-        fig = make_subplots(rows=6, cols=6, subplot_titles=titles)
+        fig = make_subplots(rows=rcount, cols=5, subplot_titles=titles)
         i = 0
         for key in List_By_SV:
             x = np.linspace(1,len(List_By_SV[key]["phi"]),len(List_By_SV[key]["phi"]))
             fig.add_trace(
-                go.Scatter(y=List_By_SV[key]["phi"],mode='lines',line=dict(color="#d32f2f")),row=int(i/6)+1,col=(i%6)+1)
+                go.Scatter(y=List_By_SV[key]["phi"],mode='lines',line=dict(color="#d32f2f")),row=int(i/5)+1,col=(i%5)+1)
             i = i + 1
         f = "../Exported Plots/" + file_in.split('.')[0] + "-PHIBySV.png"
         fig.update_layout(title_text=maintitle, showlegend=False)
         fig.update_layout(height=1440,width=2560)
-        #fig.show()
+        fig.show()
 
         #### Plot THETA / Azimuth
         maintitle = "θ by SV ID - " + file_in
-        fig = make_subplots(rows=6, cols=6, subplot_titles=titles)
+        fig = make_subplots(rows=rcount, cols=5, subplot_titles=titles)
         i = 0
         for key in List_By_SV:
             x = np.linspace(1,len(List_By_SV[key]["theta"]),len(List_By_SV[key]["theta"]))
             fig.add_trace(
-                go.Scatter(y=List_By_SV[key]["theta"],mode='lines',line=dict(color="#d32f2f")),row=int(i/6)+1,col=(i%6)+1)
+                go.Scatter(y=List_By_SV[key]["theta"],mode='lines',line=dict(color="#d32f2f")),row=int(i/5)+1,col=(i%5)+1)
             i = i + 1
         f = "../Exported Plots/" + file_in.split('.')[0] + "-PHIBySV.png"
         fig.update_layout(title_text=maintitle, showlegend=False)
         fig.update_layout(height=1440,width=2560)
-        """
-        #fig.show()
-
-        #### Plot the 3D data for each SV
-        """maintitle = "3D Plot of SV - " + file_in
-        fig = make_subplots(rows=6, cols=6, subplot_titles=titles, specs=[[{"type":"scatter3d"} for j in range(6)] for i in range(6)])
-        i = 0
-        for key in List_By_SV:
-            phi = []
-            theta = []
-            r = []
-            for j in range(len(List_By_SV[key]["phi"])):
-                phi.append(List_By_SV[key]["phi"][j] * np.pi / 180)
-                theta.append(List_By_SV[key]["theta"][j] * np.pi / 180)
-                
-            r = np.ones(len(phi))
-            x = r * np.sin(phi) * np.cos(theta)
-            y = r * np.sin(phi) * np.sin(theta)
-            z = r * np.cos(phi)
-            fig.add_trace(
-                go.Scatter3d(x=x,y=y,z=z, mode='lines'),row=int(i/6)+1,col=(i%6)+1)
-            i = i + 1
-        f = "../Exported Plots/" + file_in.split('.')[0] + "-3DSV.png"
-        fig.update_layout(title_text=maintitle, showlegend=False)
-        fig.update_layout(height=1440,width=2560)
         fig.show()
-        """
         
         #### Plot combined 3D data - Lines
         # Going to build an nxm array to store the list of R values for each SV
@@ -392,8 +367,6 @@ def CleanData(file_in, file_out, save_plots):
         
         #Sort dataset
         pickle.dump(data, open("dataset.obj", "wb"))
-        print('dumped')
-        exit()
 
         df = pd.DataFrame(data)
         df = df.sort_values(by=['phi','theta']).reset_index(drop=True)
@@ -401,14 +374,14 @@ def CleanData(file_in, file_out, save_plots):
         y = df["r"] * np.sin(df["phi"]) * np.sin(df["theta"])
         z = df["r"] * np.cos(df["phi"])
         fig = go.Figure(
-            go.Mesh3d(x=x,y=y,z=z,alphahull=1)
-            #go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=8,color=df["r"], colorbar=dict(title="Colorbar"), colorscale='Inferno',opacity=0.8))
+            #go.Mesh3d(x=x,y=y,z=z,alphahull=1)
+            go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=8,color=df["r"], colorbar=dict(title="Colorbar"), colorscale='Inferno',opacity=0.8))
         )
-
         fig.update_layout(title_text=maintitle,coloraxis_showscale=True)
         #fig.update_layout(height=1440,width=2560)
         fig.show()
 
+    exit()
     #Delete any bad data you find
     #Temporarily this is done manually by SV ID
     #to_delete = [46,51,15]
@@ -434,38 +407,6 @@ def CleanData(file_in, file_out, save_plots):
     pickle.dump(List_By_SV, open(file_out, "wb"))
     print("Finished cleaning " + file_in)
 
-#Function: PlotDeltaCNO()
-#Description: Will plot file1-file2
-def PlotDeltaCNO(file1_in, file2_in):
-    data1 = pickle.load(open (file1_in, "rb"))
-    data2 = pickle.load(open (file2_in, "rb"))
-
-    #Setup Plot
-    fig_size = plot.rcParams["figure.figsize"]
-    fig_size[0] = 20
-    fig_size[1] = 16
-    plot.rcParams["figure.figsize"] = fig_size
-    fig = plot.figure()
-    fig.suptitle("ΔCNO - " + file1_in + "-" + file2_in)
-
-    #Subtract and Plot
-    i = 0
-    for key in data1:
-        if key in data2:
-            i = i + 1
-            ax1 = fig.add_subplot(6,6,i)
-            delta = np.subtract(data1[key]["cno"], data2[key]["cno"])
-            smooth = pd.Series(delta).rolling(window=100).mean()
-            ax1.plot(delta)
-            ax1.plot(smooth)
-            ax1.set_title(str(key))
-
-    plot.tight_layout()
-    plot.subplots_adjust(wspace=0.2, hspace=0.35)
-    f = "../Exported Plots/" + "Combined_DeltaCNO.png"
-    plot.savefig(f, dpi=300, orientation='landscape', bbox_inches='tight')
-    fig.clear()
-    plot.close(fig)
 
 #Function: CombineData()
 #Description: 
@@ -484,7 +425,6 @@ def CombineData(file1_in, file2_in, file_out):
     r = [[None for x in range(m)] for x in range(n)] #n x m matrix
 
     appended = 0
-
     for time in data1:
         for key in data1.get(time):
             elev = data1[time][key][0] #TODO: UNCOMMENT THE PRINT MISMATCH AND FIX THE AVERAGING + 360/0 condition
@@ -746,7 +686,83 @@ def Calculate_3D(file_in, reference_in):
     plot.savefig(f, dpi=300, orientation='landscape', bbox_inches='tight')
     fig.clear()
     plot.close(fig)
-    
+
+#Function: PlotDeltaCNO()
+#Description: Will plot file1-file2
+def PlotDeltaCNO(file1_in, file2_in):
+    data1 = pickle.load(open (file1_in, "rb"))
+    data2 = pickle.load(open (file2_in, "rb"))
+
+    #Setup Plot
+    fig_size = plot.rcParams["figure.figsize"]
+    fig_size[0] = 20
+    fig_size[1] = 16
+    plot.rcParams["figure.figsize"] = fig_size
+    fig = plot.figure()
+    fig.suptitle("ΔCNO - " + file1_in + "-" + file2_in)
+
+    #Subtract and Plot
+    i = 0
+    for key in data1:
+        if key in data2:
+            i = i + 1
+            ax1 = fig.add_subplot(6,6,i)
+            delta = np.subtract(data1[key]["cno"], data2[key]["cno"])
+            smooth = pd.Series(delta).rolling(window=100).mean()
+            ax1.plot(delta)
+            ax1.plot(smooth)
+            ax1.set_title(str(key))
+
+    plot.tight_layout()
+    plot.subplots_adjust(wspace=0.2, hspace=0.35)
+    f = "../Exported Plots/" + "Combined_DeltaCNO.png"
+    plot.savefig(f, dpi=300, orientation='landscape', bbox_inches='tight')
+    fig.clear()
+    plot.close(fig)
+
+#Function:
+#Description:
+def PlotReference(file_in):
+    data = pickle.load(open( file_in, "rb" ))
+    theta = data.get('theta')
+    phi = data.get('phi')
+    gain = data.get('gain')
+
+    #Rotate the phi around 90 degrees
+    for i in range(len(phi)):
+        if phi[i] - np.pi/2 < 0:
+            phi[i] = np.pi/2 - phi[i]
+        else:
+            phi[i] = phi[i] - np.pi/2
+
+    offset = np.abs(np.min(gain))
+    for i in range(len(gain)):
+        for j in range(len(gain[i])):
+            gain[i][j] = gain[i][j] + offset
+
+    THETA, PHI = np.meshgrid(theta, phi)
+    """x' = x
+   = r sin θ cos φ
+y' = y cos α - z sin α
+   = (r sin θ sin φ) cos α - (r cos θ) sin α
+z' = y sin α + z cos α
+   = (r sin θ sin φ) sin α + (r cos θ) cos α"""
+
+    #Convert to cartesian
+    X = gain * np.sin(PHI) * np.cos(THETA)
+    Y = gain * np.sin(PHI) * np.sin(THETA)
+    Z = gain * np.cos(PHI)
+
+    #Rotate 90deg around the x-axis
+    alpha = 0 * np.pi / 180
+    x_ = X
+    y_ = Y*np.cos(alpha) - Z*np.sin(alpha)
+    z_ = Y*np.sin(alpha) + Z*np.cos(alpha)
+
+    fig = go.Figure(
+        go.Surface(x=x_,y=y_,z=z_)
+    )
+    fig.show()
 
 
 

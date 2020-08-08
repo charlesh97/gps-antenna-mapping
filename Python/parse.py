@@ -80,7 +80,7 @@ def Parse3DFile(frequency, gain_type, file_in, file_out):
     gain = []
 
     col_idx = -1
-    col_len = 120 #120 data points in the set
+    col_len = 121 #120 data points in the set
 
     if gain_type == 'lin':
         col_idx = 2
@@ -109,7 +109,7 @@ def Parse3DFile(frequency, gain_type, file_in, file_out):
             if not start and row[0] == frequency: #Find start of frequency (row)
                 start = True
 
-            if start and row[0] == frequency:
+            if start and row[0] == frequency: #Running state - Right frequency
                 phi.append(float(row[1]))
                 gain.append([])
 
@@ -119,6 +119,9 @@ def Parse3DFile(frequency, gain_type, file_in, file_out):
                 row_idx = row_idx + 1
 
             if start and row[0] != frequency:
+                #Need to append last bit data (copied from phi = 0)
+                phi.append(np.pi)
+                gain.append(gain[0])
                 break
 
             line_count = line_count + 1
