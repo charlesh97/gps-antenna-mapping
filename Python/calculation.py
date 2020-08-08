@@ -728,25 +728,12 @@ def PlotReference(file_in):
     phi = data.get('phi')
     gain = data.get('gain')
 
-    #Rotate the phi around 90 degrees
-    for i in range(len(phi)):
-        if phi[i] - np.pi/2 < 0:
-            phi[i] = np.pi/2 - phi[i]
-        else:
-            phi[i] = phi[i] - np.pi/2
-
     offset = np.abs(np.min(gain))
     for i in range(len(gain)):
         for j in range(len(gain[i])):
             gain[i][j] = gain[i][j] + offset
 
     THETA, PHI = np.meshgrid(theta, phi)
-    """x' = x
-   = r sin θ cos φ
-y' = y cos α - z sin α
-   = (r sin θ sin φ) cos α - (r cos θ) sin α
-z' = y sin α + z cos α
-   = (r sin θ sin φ) sin α + (r cos θ) cos α"""
 
     #Convert to cartesian
     X = gain * np.sin(PHI) * np.cos(THETA)
@@ -754,17 +741,22 @@ z' = y sin α + z cos α
     Z = gain * np.cos(PHI)
 
     #Rotate 90deg around the x-axis
-    alpha = 0 * np.pi / 180
+    """alpha = 0 * np.pi / 180
     x_ = X
     y_ = Y*np.cos(alpha) - Z*np.sin(alpha)
-    z_ = Y*np.sin(alpha) + Z*np.cos(alpha)
+    z_ = Y*np.sin(alpha) + Z*np.cos(alpha)"""
+
+
+    #Rotate 90deg around the y-axis
+    alpha = -np.pi/2
+    x_ = X * np.cos(alpha) + Z * np.sin(alpha)
+    y_ = Y
+    z_ = X * -np.sin(alpha) + Z * np.cos(alpha)
 
     fig = go.Figure(
         go.Surface(x=x_,y=y_,z=z_)
     )
     fig.show()
-
-
 
 ####################################### DEPRECATED FUNCTIONS ###################################
 def CSV_EXPORT():

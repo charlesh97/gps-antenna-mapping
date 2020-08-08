@@ -121,7 +121,7 @@ def Parse3DFile(frequency, gain_type, file_in, file_out):
             if start and row[0] != frequency:
                 #Need to append last bit data (copied from phi = 0)
                 phi.append(np.pi)
-                gain.append(gain[0])
+                gain.append(gain[0][:])
                 break
 
             line_count = line_count + 1
