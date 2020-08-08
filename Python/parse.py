@@ -126,6 +126,47 @@ def Parse3DFile(frequency, gain_type, file_in, file_out):
 
             line_count = line_count + 1
 
+    ######################################
+    ##### Rotate and adjust the data #####
+    ######################################
+    #Offset the dBs
+    offset = np.abs(np.min(gain))
+    for i in range(len(gain)):
+        for j in range(len(gain[i])):
+            gain[i][j] = gain[i][j] + offset + 1
+
+    #Convert to cartesian
+    THETA, PHI = np.meshgrid(theta, phi)
+    X = gain * np.sin(PHI) * np.cos(THETA)
+    Y = gain * np.sin(PHI) * np.sin(THETA)
+    Z = gain * np.cos(PHI)
+
+    #Rotate 90deg around the y-axis
+    alpha = -np.pi/2
+    x_ = X * np.cos(alpha) + Z * np.sin(alpha)
+    y_ = Y
+    z_ = X * -np.sin(alpha) + Z * np.cos(alpha)
+
+    #Convert back to spherical
+    gain = np.sqrt(x_**2 + y_**2 + z_**2)
+    theta = np.arctan2(y_ , x_) / np.pi * 180
+    phi = np.arctan2(np.sqrt(x_**2 + y_**2), z_) / np.pi * 180
+
+    #You're going to have to reorganize the array
+    #Use pandas df
+    #data = {phi:[]}
+    for i in range(len(gain)):
+        for j in range(len(gain[i])):
+            print(i)
+    #df = pd.DataFrame(data)
+
+
+    #Offset the dBs back
+    for i in range(len(gain)):
+        for j in range(len(gain[i])):
+            gain[i][j] = gain[i][j] - offset - 1
+
+
     data = {}
     data['theta'] = theta
     data['phi'] = phi

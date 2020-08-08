@@ -733,25 +733,11 @@ def PlotReference(file_in):
         for j in range(len(gain[i])):
             gain[i][j] = gain[i][j] + offset
 
-    THETA, PHI = np.meshgrid(theta, phi)
-
     #Convert to cartesian
+    THETA, PHI = np.meshgrid(theta, phi)
     X = gain * np.sin(PHI) * np.cos(THETA)
     Y = gain * np.sin(PHI) * np.sin(THETA)
     Z = gain * np.cos(PHI)
-
-    #Rotate 90deg around the x-axis
-    """alpha = 0 * np.pi / 180
-    x_ = X
-    y_ = Y*np.cos(alpha) - Z*np.sin(alpha)
-    z_ = Y*np.sin(alpha) + Z*np.cos(alpha)"""
-
-
-    #Rotate 90deg around the y-axis
-    alpha = -np.pi/2
-    x_ = X * np.cos(alpha) + Z * np.sin(alpha)
-    y_ = Y
-    z_ = X * -np.sin(alpha) + Z * np.cos(alpha)
 
     fig = go.Figure(
         go.Surface(x=x_,y=y_,z=z_)
