@@ -39,17 +39,17 @@ class SatelliteDataPointPair:
 
 def main():
     #### PARSE RAW DATA ####
-    #GPS_Parse_SV("../Logged/Dipole-8-2-20.TXT", "Dipole_Raw_GPS.obj")
-    #GPS_Parse_SV("../Logged/Patch-8-2-20.TXT", "Ref_Raw_GPS.obj")
+    #GPS_Parse_SV("../Logged/Dipole-8-5-20.TXT", "Dipole_Raw_GPS.obj")
+    #GPS_Parse_SV("../Logged/Patch-8-5-20.TXT", "Ref_Raw_GPS.obj")
     #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferenceTurnstile3D.csv", "./ReferenceTurnstile_Data.obj")
-    Parse3DFile('1580000000', 'rhcp', "../Reference/ReferencePatchAntenna.csv", "./ReferencePatch_Data.obj")
-    PlotReference("ReferencePatch_Data.obj")
+    #Parse3DFile('1580000000', 'rhcp', "../Reference/ReferencePatchAntenna.csv", "./ReferencePatch_Data.obj")
+    #PlotReference("ReferencePatch_Data.obj")
 
     #### Time Align Data, Remove Bad SVs ####
-    #MatchUpData("Dipole_Raw_GPS.obj", "Ref_Raw_GPS.obj")
+    MatchUpData("Dipole_Raw_GPS.obj", "Ref_Raw_GPS.obj")
 
     #### Clean up data  ####
-    #CleanData("Dipole_Raw_GPS.obj", "Dipole_Time.obj", True) 
+    CleanData("Dipole_Raw_GPS.obj", "Dipole_Time.obj", True) 
     #CleanData("Ref_Raw_GPS.obj", "Ref_Time.obj", True)
     #PlotDeltaCNO("Dipole_SV.obj", "Ref_SV.obj")
 
@@ -247,9 +247,8 @@ def CleanData(file_in, file_out, save_plots):
         
         List_By_SV[key]["cno"] = val[:]
 
-    # Only show and save plots of requested
+    # Only show and save plots if requested
     if save_plots:
-        
         #### Plot CNO Data 
         titles = []
         for key in List_By_SV:
@@ -267,7 +266,7 @@ def CleanData(file_in, file_out, save_plots):
         f = "../Exported Plots/" + file_in.split('.')[0] + "-CNOBySV.png"
         fig.update_layout(title_text=maintitle, showlegend=False)
         fig.update_layout(height=1440,width=2560)
-        fig.show()
+        #fig.show()
 
         #### Plot PHI / elevation
         maintitle = "Φ by SV ID - " + file_in
@@ -281,7 +280,7 @@ def CleanData(file_in, file_out, save_plots):
         f = "../Exported Plots/" + file_in.split('.')[0] + "-PHIBySV.png"
         fig.update_layout(title_text=maintitle, showlegend=False)
         fig.update_layout(height=1440,width=2560)
-        fig.show()
+        #fig.show()
 
         #### Plot THETA / Azimuth
         maintitle = "θ by SV ID - " + file_in
@@ -295,7 +294,7 @@ def CleanData(file_in, file_out, save_plots):
         f = "../Exported Plots/" + file_in.split('.')[0] + "-PHIBySV.png"
         fig.update_layout(title_text=maintitle, showlegend=False)
         fig.update_layout(height=1440,width=2560)
-        fig.show()
+        #fig.show()
         
         #### Plot combined 3D data - Lines
         # Going to build an nxm array to store the list of R values for each SV
@@ -339,11 +338,11 @@ def CleanData(file_in, file_out, save_plots):
             y = df["r"] * np.sin(df["phi"]) * np.sin(df["theta"])
             z = df["r"] * np.cos(df["phi"])
             fig.add_trace(
-                go.Scatter3d(x=x, y=y, z=z, mode='markers', name=str(key))
+                go.Scatter3d(x=x, y=y, z=z, mode='lines', name=str(key))
             )
-        #f = "../Exported Plots/" + file_in.split('.')[0] + "-3DCombinedSV.png"
+        f = "../Exported Plots/" + file_in.split('.')[0] + "-3DCombinedSV.png"
         fig.update_layout(title_text=maintitle)
-        #fig.update_layout(height=1440,width=2560)
+       #fig.update_layout(height=1440,width=2560)
         fig.show()
         
 
@@ -379,7 +378,7 @@ def CleanData(file_in, file_out, save_plots):
         )
         fig.update_layout(title_text=maintitle,coloraxis_showscale=True)
         #fig.update_layout(height=1440,width=2560)
-        fig.show()
+        #fig.show()
 
     exit()
     #Delete any bad data you find

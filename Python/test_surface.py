@@ -11,6 +11,23 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import plotly.figure_factory as ff
 from scipy.spatial import Delaunay
+
+phi = np.linspace(0,np.pi,100)
+theta = np.linspace(0, np.pi/2,100)
+r = np.ones(100)
+
+PHI,THETA = np.meshgrid(phi, theta)
+x = r * np.sin(PHI) * np.cos(THETA)  
+y = r * np.sin(PHI) * np.sin(THETA)
+z = r * np.cos(PHI)
+fig = go.Figure(
+    go.Surface(x=x,y=y,z=z)
+)
+fig.show()
+exit()
+
+
+
 """
 u=np.linspace(-np.pi/2, np.pi/2, 60)
 v=np.linspace(0, np.pi, 60)
