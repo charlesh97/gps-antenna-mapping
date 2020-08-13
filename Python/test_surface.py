@@ -71,17 +71,19 @@ exit()
 
 
 #Grab data
-data = pickle.load(open ( "dataset.obj", "rb" ))
-df = pd.DataFrame(data)
-df = df.sort_values(by=['phi','theta']).reset_index(drop=True)
-x = df["r"] * np.sin(df["phi"]) * np.cos(df["theta"])      #sin(PHI), cos(THETA)       #WHERE PHI @ Z-AXIS = 0, @XY-PLANE = 90
-y = df["r"] * np.sin(df["phi"]) * np.sin(df["theta"])
-z = df["r"] * np.cos(df["phi"])
-fig = go.Figure(
-    go.Mesh3d(x=x,y=y,z=z,alphahull=15,opacity=0.7)
-    #go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(size=8,color=df["r"], colorbar=dict(title="Colorbar"), colorscale='Inferno',opacity=0.8))
-)
-fig.show()
+theta, phi = np.linspace(0, .5*np.pi, 40), np.linspace(0, np.pi, 40)
+THETA, PHI = np.meshgrid(theta, phi)
+R = 1   #np.cos(PHI ** 2)
+X = R * np.sin(PHI) * np.cos(THETA)
+Y = R * np.sin(PHI) * np.sin(THETA)
+Z = R * np.cos(PHI)
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+plot = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=plt.get_cmap('jet'), linewidth=0, antialiased=False, alpha=0.5)
+plt.show()
+
+
 """#Dataframe sorting
 df = pd.DataFrame(data)
 df = df.sort_values(by=['phi','theta']).reset_index(drop=True)
